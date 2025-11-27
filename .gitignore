@@ -5,10 +5,14 @@ plex_debrid/config/settings.json.old
 plex_debrid/config/plex_debrid.log
 plex_debrid/config/plex_metadata.pkl
 zurg/config.yml
-zurg/data/
+
+# Ignore zurg data but keep folder
+zurg/data/*
+!zurg/data/.gitkeep
 
 # Media
-local_movies/
+local_movies/*
+!local_movies/.gitkeep
 
 # Logs
 *.log
