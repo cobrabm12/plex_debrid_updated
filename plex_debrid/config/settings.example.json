@@ -1,7 +1,6 @@
 {
     "Content Services": [
         "Plex",
-        "Trakt",
         "Overseerr"
     ],
     "Plex users": [
@@ -11,15 +10,8 @@
         ]
     ],
     "Plex auto remove": "movie",
-    "Trakt users": [
-        [
-            "YOUR_TRAKT_USERNAME",
-            "YOUR_TRAKT_CLIENT_ID"
-        ]
-    ],
-    "Trakt lists": [
-        "YOUR_TRAKT_USERNAME's watchlist"
-    ],
+    "Trakt users": [],
+    "Trakt lists": [],
     "Trakt auto remove": "movie",
     "Trakt early movie releases": "false",
     "Overseerr users": [
@@ -46,7 +38,7 @@
     "Plex library refresh delay": "2",
     "Plex server address": "http://host.docker.internal:32400",
     "Plex library check": [],
-    "Plex ignore user": "",
+    "Plex ignore user": "cobrabm",
     "Trakt ignore user": "",
     "Local ignore list path": "",
     "Jellyfin API Key": "",
@@ -67,174 +59,17 @@
                     "media type",
                     "all",
                     ""
-                ],
+                ]
+            ],
+            "true",
+            [
                 [
                     "title",
                     "requirement",
                     "exclude",
                     "dolby.?vision|\\b(dv)\\b|dovi"
                 ]
-            ],
-            "true",
-            []
+            ]
         ]
-    ],
-    "Special character renaming": [
-        [
-            "&",
-            "and"
-        ],
-        [
-            "\u00fc",
-            "ue"
-        ],
-        [
-            "\u00e4",
-            "ae"
-        ],
-        [
-            "\u00e2",
-            "a"
-        ],
-        [
-            "\u00e1",
-            "a"
-        ],
-        [
-            "\u00e0",
-            "a"
-        ],
-        [
-            "\u00f6",
-            "oe"
-        ],
-        [
-            "\u00f4",
-            "o"
-        ],
-        [
-            "\u00df",
-            "ss"
-        ],
-        [
-            "\u00e9",
-            "e"
-        ],
-        [
-            "\u00e8",
-            "e"
-        ],
-        [
-            "\u00ee",
-            "i"
-        ],
-        [
-            "sh!t",
-            "shit"
-        ],
-        [
-            "f**k",
-            "fuck"
-        ],
-        [
-            "f**king",
-            "fucking"
-        ],
-        [
-            ":",
-            ""
-        ],
-        [
-            "(",
-            ""
-        ],
-        [
-            ")",
-            ""
-        ],
-        [
-            "`",
-            ""
-        ],
-        [
-            "\u00b4",
-            ""
-        ],
-        [
-            ",",
-            ""
-        ],
-        [
-            "!",
-            ""
-        ],
-        [
-            "?",
-            ""
-        ],
-        [
-            " - ",
-            " "
-        ],
-        [
-            "'",
-            ""
-        ],
-        [
-            "\u200b",
-            ""
-        ],
-        [
-            "*",
-            ""
-        ],
-        [
-            " ",
-            "."
-        ]
-    ],
-    "Jackett resolver timeout": "1",
-    "Jackett indexer filter": "!status:failing,test:passed",
-    "Prowlarr Base URL": "http://127.0.0.1:9696",
-    "Prowlarr API Key": "",
-    "Orionoid API Key": "",
-    "Orionoid Scraper Parameters": [
-        [
-            "limitcount",
-            "5"
-        ],
-        [
-            "sortvalue",
-            "popularity"
-        ],
-        [
-            "streamtype",
-            "torrent"
-        ],
-        [
-            "filename",
-            "true"
-        ]
-    ],
-    "Nyaa parameters": "&c=1_0&s=seeders&o=desc",
-    "Nyaa sleep time": "5",
-    "Nyaa proxy": "nyaa.si",
-    "Torrentio Scraper Parameters": "https://torrentio.strem.fun/sort=qualitysize/manifest.json",
-    "Debrid Services": [
-        "Real Debrid"
-    ],
-    "Tracker specific Debrid Services": [],
-    "Real Debrid API Key": "YOUR_REAL_DEBRID_API_KEY",
-    "All Debrid API Key": "",
-    "Premiumize API Key": "",
-    "Debrid Link API Key": "",
-    "Put.io API Key": "",
-    "Show Menu on Startup": "false",
-    "Debug printing": "false",
-    "Log to file": "false",
-    "version": [
-        "2.95",
-        "Settings compatible update",
-        []
     ]
 }
