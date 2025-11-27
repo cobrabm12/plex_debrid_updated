@@ -9,7 +9,7 @@ echo Mounting Zurg to X: drive...
 if exist X:\ (
     echo Drive X: is already mounted.
 ) else (
-    start "" rclone.exe mount zurg: X: --no-checksum --no-modtime --ignore-size --vfs-cache-mode full --log-file rclone_mount.log --log-level INFO
+    powershell -Command "Start-Process -FilePath 'rclone.exe' -ArgumentList 'mount zurg: X: --no-checksum --no-modtime --ignore-size --vfs-cache-mode full --log-file rclone_mount.log --log-level INFO' -WindowStyle Hidden"
 )
 
 echo Done.
