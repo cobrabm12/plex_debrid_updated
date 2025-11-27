@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  zurg:
+    image: ghcr.io/debridmediamanager/zurg-testing:latest
+    container_name: zurg
+    restart: unless-stopped
+    ports:
+      - 9999:9999
+    volumes:
+      - ./zurg/config.yml:/app/config.yml
+      - ./zurg/data:/app/data
+
+  plex_debrid:
+    build: ./plex_debrid_src
+    container_name: plex_debrid
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Bucharest
+    volumes:
+      - ./plex_debrid/config:/config
+    stdin_open: true # Important for interactive setup if needed
+    tty: true        # Important for interactive setup if needed
+    depends_on:
+      - zurg

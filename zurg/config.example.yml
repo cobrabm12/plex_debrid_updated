@@ -1,0 +1,30 @@
+```yaml
+# Zurg Configuration
+# Get your API Token from: https://real-debrid.com/apitoken
+
+zurg: v1
+token: YOUR_REAL_DEBRID_API_TOKEN_HERE
+# host: "[::]" # Uncomment if you want to access zurg from outside localhost
+    # port: 9999
+    # concurrent_workers: 32
+    # check_for_changes_every_secs: 10
+    # ignore_renaming: false
+    # retain_rd_torrent_name: false
+    # retain_folder_name_extension: false
+enable_repair: true
+
+directories:
+  shows:
+    group_order: 10
+    group: media
+    filters:
+      - regex: /(?i)\bS\d+|Season\s?\d+|Ep(?:isode)?\s?\d+|Complete\s?Series|Smallville|Alien\s?Earth/
+    root_folder_id: null
+
+  movies:
+    group_order: 20
+    group: media
+    filters:
+      - regex: /.*/
+    root_folder_id: null
+```

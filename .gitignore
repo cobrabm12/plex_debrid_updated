@@ -1,0 +1,24 @@
+# Secrets and Configs
+rclone.conf
+plex_debrid/config/settings.json
+plex_debrid/config/settings.json.old
+plex_debrid/config/plex_debrid.log
+plex_debrid/config/plex_metadata.pkl
+zurg/config.yml
+zurg/data/
+
+# Media
+local_movies/
+
+# Logs
+*.log
+rclone_mount.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+
+# System
+.DS_Store
+Thumbs.db
