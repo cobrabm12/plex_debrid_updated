@@ -78,6 +78,16 @@ settings menu.
   canonical `python-plexapi` library); metadata and watch-status (scrobble) calls still
   use `metadata.provider.plex.tv`, which remains active. If your Plex watchlist ever
   returns `404`, ensure you are on this updated version.
+- **Real-Debrid API change (Nov 2024):** Real-Debrid disabled the data returned by the
+  `/torrents/instantAvailability` endpoint, which plex_debrid relied on to detect cached
+  torrents in a single batch call. The Real-Debrid integration now falls back to *probing*
+  each release (add magnet → read `/torrents/info` → detect cached status → remove the
+  probe torrent) when instant-availability data is missing. This is heavier than the old
+  batch check (a few API calls per release, bounded by `MAX_CHECK` in
+  `debrid/services/realdebrid.py`) and **should be tested against your own Real-Debrid
+  account** — it could not be verified here without live credentials.
+- The `rarbg` scraper (`scraper/services/rarbg.py`) targets `torrentapi.org`, which shut
+  down in 2023; it is non-functional and not part of the default sources. Use `torrentio`.
 
 ## Credits
 
