@@ -44,12 +44,40 @@ This repository contains a complete setup for streaming content using Plex, Real
 - **Plex Debrid** will monitor your Plex Watchlist (or Trakt watchlist) and automatically add movies/shows to Real-Debrid via Zurg.
 - **Rclone** (optional, if used) can mount the Zurg WebDAV to a local drive letter for Plex to read.
 
+## Using Jellyfin (alongside or instead of Plex)
+
+Jellyfin has **no built-in watchlist**, so it cannot be a *content source* (the
+"what to download" list). For a Jellyfin-based or mixed Plex + Jellyfin setup,
+configure plex_debrid like this (all options are in the in-app settings menu under
+`Options/Settings`):
+
+- **Content source** (what to download): use **Trakt** lists, and/or **Jellyseerr**
+  /**Overseerr** requests (Jellyseerr is API-compatible — set it up as the "Overseerr"
+  service). On a mixed setup you can also keep the **Plex** watchlist enabled.
+- **Library collection service** (what you already own, to avoid re-downloading):
+  choose **Jellyfin Library** *or* **Plex Library**. Because Plex and Jellyfin read
+  the same Zurg/Real-Debrid mount, either one reflects the same content. `Jellyfin
+  Library` reads your Jellyfin library via the Jellyfin API and matches items by their
+  IMDb/TMDb/TVDb provider IDs.
+- **Library update services** (refresh after a download): enable **Jellyfin Libraries**
+  and/or **Plex Libraries** — you can enable both at once when running them in parallel.
+
+To configure Jellyfin, set your **Jellyfin API Key** (Jellyfin Dashboard → API Keys)
+and **Jellyfin server address** (e.g. `http://host.docker.internal:8096`) in the
+settings menu.
+
 ## Notes
 
 - The `plex_debrid_src` folder contains the source code for `plex_debrid`. It has been patched to fix User-Agent issues with Torrentio and to handle Real-Debrid API limitations.
 - The core `plex_debrid_src/releases/` package was previously excluded from version control by a stray Visual Studio `.gitignore` rule (`[Rr]eleases/`). The `.gitignore` has been corrected and the package restored, otherwise the app fails to start with `ModuleNotFoundError: No module named 'releases'`.
 - **Do not commit `zurg/config.yml` or `plex_debrid/config/settings.json` to a public repository as they contain your private API keys.**
 - `check_watchlist.py` reads your Plex token from the `PLEX_TOKEN` environment variable (or the first CLI argument) — it is no longer hard-coded.
+- **Plex API change (late 2025/2026):** Plex deprecated the `metadata.provider.plex.tv`
+  endpoints for the watchlist. The Plex integration now uses `discover.provider.plex.tv`
+  for the watchlist, add/remove-from-watchlist and search operations (matching the
+  canonical `python-plexapi` library); metadata and watch-status (scrobble) calls still
+  use `metadata.provider.plex.tv`, which remains active. If your Plex watchlist ever
+  returns `404`, ensure you are on this updated version.
 
 ## Credits
 

@@ -36,7 +36,57 @@ def post(url, data):
         ui_print("jellyfin error: (json exception): " + str(e), debug=ui_settings.debug)
         return None
 
-class library():
+def provider_eids(item):
+    # Build plex-style external IDs (imdb://, tmdb://, tvdb://) from a Jellyfin item's ProviderIds.
+    EID = []
+    provider_ids = getattr(item, 'ProviderIds', None)
+    if provider_ids is not None:
+        for key, value in vars(provider_ids).items():
+            if value in (None, ""):
+                continue
+            key_l = str(key).lower()
+            if key_l == 'imdb':
+                EID += ['imdb://' + str(value)]
+            elif key_l == 'tmdb':
+                EID += ['tmdb://' + str(value)]
+            elif key_l == 'tvdb':
+                EID += ['tvdb://' + str(value)]
+    return EID
+
+def make_media(**attrs):
+    return classes.media(SimpleNamespace(**attrs))
+
+def build_show(user_id, series_id, series_item):
+    # Build a 'show' media object (with Seasons/Episodes) from a Jellyfin series.
+    show_eid = provider_eids(series_item)
+    show_guid = show_eid[0] if len(show_eid) > 0 else 'jellyfin://' + str(series_id)
+    seasons_map = {}
+    leaf_count = 0
+    try:
+        url = library.url + '/Shows/' + str(series_id) + '/Episodes?userId=' + str(user_id) + '&Fields=ProviderIds'
+        response = get(url)
+        if response is not None and hasattr(response, 'Items'):
+            for ep in response.Items:
+                season_index = getattr(ep, 'ParentIndexNumber', None)
+                episode_index = getattr(ep, 'IndexNumber', None)
+                # Skip specials (season 0) and items without proper numbering, to match plex behaviour.
+                if season_index in (None, 0) or episode_index is None:
+                    continue
+                episode_obj = make_media(type='episode', index=episode_index, parentIndex=season_index,
+                                         grandparentEID=show_eid, title=getattr(ep, 'Name', ''))
+                seasons_map.setdefault(season_index, []).append(episode_obj)
+                leaf_count += 1
+    except Exception as e:
+        ui_print("[jellyfin] error: couldnt read episodes for series '" + str(getattr(series_item, 'Name', series_id)) + "': " + str(e), debug=ui_settings.debug)
+    seasons = []
+    for season_index, episodes in seasons_map.items():
+        seasons += [make_media(type='season', index=season_index, parentEID=show_eid,
+                               leafCount=len(episodes), Episodes=episodes)]
+    return make_media(type='show', title=getattr(series_item, 'Name', ''),
+                      year=getattr(series_item, 'ProductionYear', None), EID=show_eid,
+                      guid=show_guid, leafCount=leaf_count, Seasons=seasons)
+
+class library(classes.library):
     name = 'Jellyfin Library'
     url = 'http://localhost:8096'
 
@@ -138,28 +188,63 @@ class library():
             except:
                 print("[jellyfin] error: couldnt refresh libraries")
 
-    def __new__(self):
-        #not implemented yet
-        list = []
-        ui_print('[jellyfin] getting entire jellyfin library ...')
-        url = library.url + '/users'
-        response = get(url)
-        for user in response:
-            url = library.url + '/users/' + user.Id + '/Items?Recursive=true&fields=AirTime,CanDelete,CanDownload,ChannelInfo,Chapters,ChildCount,CumulativeRunTimeTicks,CustomRating,DateCreated,DateLastMediaAdded,DisplayPreferencesId,Etag,ExternalUrls,Genres,HomePageUrl,ItemCounts,MediaSourceCount,MediaSources,OriginalTitle,Overview,ParentId,Path,People,PlayAccess,ProductionLocations,ProviderIds,PrimaryImageAspectRatio,RecursiveItemCount,Settings,ScreenshotImageTags,SeriesPrimaryImage,SeriesStudio,SortName,SpecialEpisodeNumbers,Studios,BasicSyncInfo,SyncInfo,Taglines,Tags,RemoteTrailers,MediaStreams,SeasonUserData,ServiceName,ThemeSongIds,ThemeVideoIds,ExternalEtag,PresentationUniqueKey,InheritedParentalRatingValue,ExternalSeriesId,SeriesPresentationUniqueKey,DateLastRefreshed,DateLastSaved,RefreshState,ChannelImage,EnableMediaSourceDisplay,Width,Height,ExtraIds,LocalTrailerCount,IsHD,SpecialFeatureCount'
-            response = get(url)
-            response
-        ui_print('done')
-        if hasattr(response, 'MediaContainer'):
-            if hasattr(response.MediaContainer, 'Metadata'):
-                for element in response.MediaContainer.Metadata:
-                    list += [classes.media(element)]
-        else:
-            ui_print(
-                "[jellyfin error]: couldnt reach local jellyfin server at server address: " + library.url + " - or this library really is empty.")
-        if len(list) == 0:
-            ui_print(
-                "[jellyfin error]: Your library seems empty. To prevent unwanted behaviour, no further downloads will be started. If your library really is empty, please add at least one media item manually.")
-        return list
+    def __new__(self, silent=False):
+        list_ = []
+        if not silent:
+            ui_print('[jellyfin] getting jellyfin library ...')
+        users_response = get(library.url + '/Users')
+        if users_response is None or not isinstance(users_response, list):
+            ui_print("[jellyfin error]: couldnt reach local jellyfin server at server address: " + library.url + " - check your jellyfin server address and api key.")
+            return list_
+        seen_movies = []
+        seen_series = {}
+        try:
+            for user in users_response:
+                user_id = getattr(user, 'Id', None)
+                if user_id is None:
+                    continue
+                start = 0
+                total = 1
+                while start < total:
+                    url = (library.url + '/Users/' + str(user_id) + '/Items'
+                           '?Recursive=true&IncludeItemTypes=Movie,Series'
+                           '&Fields=ProviderIds,ProductionYear'
+                           '&StartIndex=' + str(start) + '&Limit=200')
+                    response = get(url)
+                    if response is None or not hasattr(response, 'Items'):
+                        break
+                    items = response.Items
+                    total = getattr(response, 'TotalRecordCount', len(items))
+                    if len(items) == 0:
+                        break
+                    start += len(items)
+                    for item in items:
+                        item_type = getattr(item, 'Type', '')
+                        if item_type == 'Movie':
+                            eids = provider_eids(item)
+                            key = tuple(sorted(eids)) if len(eids) > 0 else ('jellyfin', getattr(item, 'Id', ''))
+                            if key in seen_movies:
+                                continue
+                            seen_movies += [key]
+                            guid = eids[0] if len(eids) > 0 else 'jellyfin://' + str(getattr(item, 'Id', ''))
+                            list_ += [make_media(type='movie', title=getattr(item, 'Name', ''),
+                                                 year=getattr(item, 'ProductionYear', None),
+                                                 EID=eids, guid=guid)]
+                        elif item_type == 'Series':
+                            series_id = getattr(item, 'Id', None)
+                            if series_id is None or series_id in seen_series:
+                                continue
+                            seen_series[series_id] = (user_id, item)
+            # build the show hierarchy once per unique series
+            for series_id, (user_id, series_item) in seen_series.items():
+                list_ += [build_show(user_id, series_id, series_item)]
+        except Exception as e:
+            ui_print("[jellyfin error]: (library exception): " + str(e), debug=ui_settings.debug)
+        if len(list_) == 0:
+            ui_print("[jellyfin warning]: Your jellyfin library seems empty. If this is unexpected, check your jellyfin server address and api key.", debug=ui_settings.debug)
+        elif not silent:
+            ui_print('done')
+        return list_
 
 # Multiprocessing watchlist method
 def multi_init(cls, obj, result, index):

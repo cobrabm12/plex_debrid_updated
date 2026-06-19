@@ -121,14 +121,16 @@ class watchlist(classes.watchlist):
                 total = 1
                 while added < total:
                     total = 0
-                    url = 'https://metadata.provider.plex.tv/library/sections/watchlist/all?X-Plex-Container-Size=200&X-Plex-Container-Start=' + str(added) + '&X-Plex-Token=' + user[1]
+                    # Plex deprecated metadata.provider.plex.tv for the watchlist (~2025).
+                    # The Discover API is now the canonical source (matches python-plexapi).
+                    url = 'https://discover.provider.plex.tv/library/sections/watchlist/all?X-Plex-Container-Size=200&X-Plex-Container-Start=' + str(added) + '&X-Plex-Token=' + user[1]
                     response = get(url)
                     if hasattr(response, 'Error'):
-                        # Try Discover API first
-                        ui_print("[plex] Standard watchlist failed, trying Discover API...", debug=ui_settings.debug)
-                        url_discover = 'https://discover.provider.plex.tv/library/sections/watchlist/all?X-Plex-Token=' + user[1]
-                        response = get(url_discover)
-                        
+                        # Try the legacy metadata endpoint as a secondary attempt
+                        ui_print("[plex] Discover watchlist failed, trying legacy metadata API...", debug=ui_settings.debug)
+                        url_legacy = 'https://metadata.provider.plex.tv/library/sections/watchlist/all?X-Plex-Container-Size=200&X-Plex-Container-Start=' + str(added) + '&X-Plex-Token=' + user[1]
+                        response = get(url_legacy)
+
                         if hasattr(response, 'Error'):
                             # Try alternative RSS endpoint for managed users
                             ui_print("[plex] Discover API failed, trying RSS fallback...", debug=ui_settings.debug)
@@ -190,7 +192,7 @@ class watchlist(classes.watchlist):
         if hasattr(item, 'user'):
             if isinstance(item.user[0], list):
                 for user in item.user:
-                    url = 'https://metadata.provider.plex.tv/actions/removeFromWatchlist?ratingKey=' + item.ratingKey + '&X-Plex-Token=' + user[1]
+                    url = 'https://discover.provider.plex.tv/actions/removeFromWatchlist?ratingKey=' + item.ratingKey + '&X-Plex-Token=' + user[1]
                     try:
                         response = session.put(url, data={'ratingKey': item.ratingKey})
                         ui_print('[plex] item: "' + item.title + '" removed from ' + user[0] + '`s watchlist')
@@ -199,7 +201,7 @@ class watchlist(classes.watchlist):
                 if not self == []:
                     self.data.remove(item)
             else:
-                url = 'https://metadata.provider.plex.tv/actions/removeFromWatchlist?ratingKey=' + item.ratingKey + '&X-Plex-Token=' + item.user[1]
+                url = 'https://discover.provider.plex.tv/actions/removeFromWatchlist?ratingKey=' + item.ratingKey + '&X-Plex-Token=' + item.user[1]
                 try:
                     response = session.put(url, data={'ratingKey': item.ratingKey})
                     ui_print('[plex] item: "' + item.title + '" removed from ' + item.user[0] + '`s watchlist')
@@ -210,7 +212,7 @@ class watchlist(classes.watchlist):
 
     def add(self, item, user):
         ui_print('[plex] item: "' + item.title + '" added to ' + user[0] + '`s watchlist')
-        url = 'https://metadata.provider.plex.tv/actions/addToWatchlist?ratingKey=' + item.ratingKey + '&X-Plex-Token=' + \
+        url = 'https://discover.provider.plex.tv/actions/addToWatchlist?ratingKey=' + item.ratingKey + '&X-Plex-Token=' + \
                 user[1]
         response = session.put(url, data={'ratingKey': item.ratingKey})
         if item.type == 'show':
@@ -1010,7 +1012,7 @@ class library(classes.library):
 
 def search(query, library=[]):
     query = query.replace(' ', '%20')
-    url = 'https://metadata.provider.plex.tv/library/search?query=' + query + '&limit=20&searchTypes=movies%2Ctv&includeMetadata=1&X-Plex-Token=' + users[0][1]
+    url = 'https://discover.provider.plex.tv/library/search?query=' + query + '&limit=20&searchTypes=movies%2Ctv&includeMetadata=1&X-Plex-Token=' + users[0][1]
     response = get(url)
     try:
         return response.MediaContainer.SearchResult
