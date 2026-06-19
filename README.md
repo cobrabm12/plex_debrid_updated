@@ -9,7 +9,35 @@ This repository contains a complete setup for streaming content using Plex, Real
 - A [Plex](https://www.plex.tv/) server
 - [Trakt.tv](https://trakt.tv/) account (optional but recommended)
 
-## Installation
+## Quick start (recommended)
+
+An interactive installer sets everything up for you — it checks/installs Docker,
+asks which services you want to use, writes the config files and starts the stack.
+
+**Linux (any distribution) / macOS:**
+```bash
+git clone https://github.com/cobrabm12/plex_debrid_updated.git
+cd plex_debrid_updated
+./install.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/cobrabm12/plex_debrid_updated.git
+cd plex_debrid_updated
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+The installer asks for your Real-Debrid token and which content sources (Plex
+Watchlist / Trakt / Overseerr-Jellyseerr), media servers (Plex / Jellyfin) and
+collection service you want, then generates a complete `settings.json`, builds the
+image and starts the containers. Accounts that use OAuth (Plex, Trakt) are linked
+afterwards in the app's interactive menu (the installer tells you the exact command).
+You can re-run the installer any time to reconfigure.
+
+If you prefer to configure everything by hand, follow the manual steps below.
+
+## Manual installation
 
 1.  **Clone the repository:**
     ```bash

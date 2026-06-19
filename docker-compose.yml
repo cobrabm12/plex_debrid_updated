@@ -14,7 +14,7 @@ services:
     container_name: plex_debrid
     restart: unless-stopped
     environment:
-      - TZ=Europe/Bucharest
+      - TZ=${TZ:-Europe/Bucharest}
       # Optional credential overrides, read from a local .env file (see .env.example).
       # Left empty -> the app falls back to its built-in shared public defaults.
       - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID:-}
