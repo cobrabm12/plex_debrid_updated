@@ -13,8 +13,8 @@ This repository contains a complete setup for streaming content using Plex, Real
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/cobrabm12/plex_debrid_trakt.git
-    cd plex_debrid_trakt
+    git clone https://github.com/cobrabm12/plex_debrid_updated.git
+    cd plex_debrid_updated
     ```
 
 2.  **Configure Zurg:**
@@ -47,7 +47,9 @@ This repository contains a complete setup for streaming content using Plex, Real
 ## Notes
 
 - The `plex_debrid_src` folder contains the source code for `plex_debrid`. It has been patched to fix User-Agent issues with Torrentio and to handle Real-Debrid API limitations.
+- The core `plex_debrid_src/releases/` package was previously excluded from version control by a stray Visual Studio `.gitignore` rule (`[Rr]eleases/`). The `.gitignore` has been corrected and the package restored, otherwise the app fails to start with `ModuleNotFoundError: No module named 'releases'`.
 - **Do not commit `zurg/config.yml` or `plex_debrid/config/settings.json` to a public repository as they contain your private API keys.**
+- `check_watchlist.py` reads your Plex token from the `PLEX_TOKEN` environment variable (or the first CLI argument) — it is no longer hard-coded.
 
 ## Credits
 

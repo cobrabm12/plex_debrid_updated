@@ -1,41 +1,39 @@
+import os
+import sys
 import requests
-import json
 
-token = "REDACTED-PLEX-TOKEN"
+# Provide your Plex token via the PLEX_TOKEN environment variable or as the
+# first command-line argument. Never hard-code tokens in source files.
+token = os.environ.get("PLEX_TOKEN") or (sys.argv[1] if len(sys.argv) > 1 else "")
+if not token:
+    print("Usage: PLEX_TOKEN=<your_token> python check_watchlist.py")
+    print("   or: python check_watchlist.py <your_token>")
+    sys.exit(1)
+
 headers = {'Accept': 'application/json'}
 
-print("--- Testing Standard API ---")
-url_standard = f'https://metadata.provider.plex.tv/library/sections/watchlist/all?X-Plex-Token={token}'
-try:
-    resp = requests.get(url_standard, headers=headers)
-    print(f"Status: {resp.status_code}")
-    if resp.status_code == 200:
-        data = resp.json()
-        if 'MediaContainer' in data and 'Metadata' in data['MediaContainer']:
-            print(f"Found {len(data['MediaContainer']['Metadata'])} items.")
-            for item in data['MediaContainer']['Metadata']:
-                print(f" - {item.get('title')} ({item.get('year')})")
-        else:
-            print("No Metadata in response.")
-    else:
-        print(resp.text)
-except Exception as e:
-    print(f"Error: {e}")
 
-print("\n--- Testing Discover API ---")
-url_discover = f'https://discover.provider.plex.tv/library/sections/watchlist/all?X-Plex-Token={token}'
-try:
-    resp = requests.get(url_discover, headers=headers)
-    print(f"Status: {resp.status_code}")
-    if resp.status_code == 200:
-        data = resp.json()
-        if 'MediaContainer' in data and 'Metadata' in data['MediaContainer']:
-            print(f"Found {len(data['MediaContainer']['Metadata'])} items.")
-            for item in data['MediaContainer']['Metadata']:
-                print(f" - {item.get('title')} ({item.get('year')})")
+def check(label, base_url):
+    print(f"--- Testing {label} ---")
+    url = f'{base_url}?X-Plex-Token={token}'
+    try:
+        resp = requests.get(url, headers=headers, timeout=30)
+        print(f"Status: {resp.status_code}")
+        if resp.status_code == 200:
+            data = resp.json()
+            if 'MediaContainer' in data and 'Metadata' in data['MediaContainer']:
+                items = data['MediaContainer']['Metadata']
+                print(f"Found {len(items)} items.")
+                for item in items:
+                    print(f" - {item.get('title')} ({item.get('year')})")
+            else:
+                print("No Metadata in response.")
         else:
-            print("No Metadata in response.")
-    else:
-        print(resp.text)
-except Exception as e:
-    print(f"Error: {e}")
+            print(resp.text)
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+check("Standard API", "https://metadata.provider.plex.tv/library/sections/watchlist/all")
+print()
+check("Discover API", "https://discover.provider.plex.tv/library/sections/watchlist/all")

@@ -1,9 +1,16 @@
-FROM python:3
+FROM python:3.12-slim
 
-ADD . / ./
+WORKDIR /app
 
-RUN pip install -r requirements.txt
+# Install dependencies first to leverage Docker layer caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application source
+COPY . .
 
 ENV TERM=xterm
+ENV PYTHONUNBUFFERED=1
 
-CMD [ "python", "./main.py", "--config-dir", "config", "-e", "TERM=xterm"]
+# Config is mounted at /config by docker-compose
+CMD ["python", "./main.py", "--config-dir", "/config"]
