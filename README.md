@@ -35,6 +35,16 @@ image and starts the containers. Accounts that use OAuth (Plex, Trakt) are linke
 afterwards in the app's interactive menu (the installer tells you the exact command).
 You can re-run the installer any time to reconfigure.
 
+**It can also install the media servers for you.** For each server it asks whether to
+deploy it here or connect to one you already run:
+
+- On **Linux** it can run Plex, Jellyfin and/or Jellyseerr in Docker (extra services
+  in `docker-compose.yml`, enabled via compose profiles). An `rclone` container mounts
+  the Zurg WebDAV into a shared `./data` folder so Plex/Jellyfin can read your debrid
+  library — point their libraries at `/data`. (FUSE mount sharing requires a Linux host.)
+- On **Windows** it installs Plex/Jellyfin natively via `winget` and uses the bundled
+  `rclone.exe` to mount the library to a drive letter (Jellyseerr still runs in Docker).
+
 If you prefer to configure everything by hand, follow the manual steps below.
 
 ## Manual installation

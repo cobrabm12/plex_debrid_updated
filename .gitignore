@@ -1,6 +1,7 @@
 # Secrets and Configs
 .env
 rclone.conf
+rclone/rclone.conf
 plex_debrid/config/settings.json
 plex_debrid/config/settings.json.old
 plex_debrid/config/plex_debrid.log
@@ -10,6 +11,12 @@ zurg/config.yml
 # Ignore zurg data but keep folder
 zurg/data/*
 !zurg/data/.gitkeep
+
+# Runtime data + media-server config dirs created by the installer
+data/
+plex/config/
+jellyfin/config/
+jellyseerr/config/
 
 # Media
 local_movies/*

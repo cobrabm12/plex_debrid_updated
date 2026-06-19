@@ -89,40 +89,69 @@ if (YesNo "Use Trakt lists as a content source?" "N")        { $Content += "Trak
 if (YesNo "Use Overseerr / Jellyseerr requests?" "N")        { $Content += "Overseerr"; $UseOverseerr = $true }
 if ($Content.Count -eq 0) { Warn "No content source chosen; defaulting to Plex Watchlist."; $Content += "Plex" }
 
-Title "4) Media server(s) to refresh after a download"
-if (YesNo "Refresh a Plex server?" "Y")     { $Update += "Plex Libraries"; $UsePlexSrv = $true }
-if (YesNo "Refresh a Jellyfin server?" "N") { $Update += "Jellyfin Libraries"; $UseJellyfin = $true }
-if ($UseOverseerr) { $Update += "Overseerr Requests" }
-if ($Update.Count -eq 0) { Warn "No refresh target chosen; defaulting to Plex Libraries."; $Update += "Plex Libraries"; $UsePlexSrv = $true }
+function Install-Winget($id, $name) {
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-Host "  Installing $name via winget..."
+        winget install -e --id $id --accept-source-agreements --accept-package-agreements
+    } else {
+        Warn "winget is not available; please install $name manually from its website."
+    }
+}
+
+$Profiles = @()
+$PlexAddress = ""; $JellyfinAddress = ""; $JellyfinApiKey = ""; $OverseerrUrl = ""; $OverseerrApiKey = ""
+$NeedRclone = $false
+
+Title "4) Media servers"
+Write-Host "This installer can install Plex/Jellyfin for you (natively via winget) or connect to existing ones." -ForegroundColor DarkGray
+Write-Host "On Windows the media servers run natively and read the rclone.exe drive (set up below)." -ForegroundColor DarkGray
+
+if (YesNo "Use Plex?" "Y") {
+    $UsePlexSrv = $true; $Update += "Plex Libraries"
+    if (YesNo "  Install Plex Media Server here (winget)?" "Y") {
+        Install-Winget "Plex.PlexMediaServer" "Plex Media Server"
+        $NeedRclone = $true
+        Warn "When you add Plex libraries, point them at the rclone drive set up below."
+    }
+    $PlexAddress = Ask "  Plex server address" "http://host.docker.internal:32400"
+}
+
+if (YesNo "Use Jellyfin?" "N") {
+    $UseJellyfin = $true; $Update += "Jellyfin Libraries"
+    if (YesNo "  Install Jellyfin here (winget)?" "Y") {
+        Install-Winget "Jellyfin.Server" "Jellyfin"
+        $NeedRclone = $true
+        Warn "When you add Jellyfin libraries, point them at the rclone drive set up below."
+    }
+    $JellyfinAddress = Ask "  Jellyfin server address" "http://host.docker.internal:8096"
+    $JellyfinApiKey  = Ask "  Jellyfin API key (blank to set later)" ""
+}
+
+if ($UseOverseerr) {
+    Title "Overseerr / Jellyseerr (request manager)"
+    if (YesNo "  Install Jellyseerr here in Docker?" "Y") {
+        $Profiles += "jellyseerr"; $OverseerrUrl = "http://jellyseerr:5055"
+        Ok "Jellyseerr will be installed in Docker ($OverseerrUrl)"
+    } else {
+        $OverseerrUrl = Ask "  Existing Overseerr/Jellyseerr base URL" "http://host.docker.internal:5055"
+    }
+    $OverseerrApiKey = Ask "  Overseerr/Jellyseerr API key (blank to set later)" ""
+    $Update += "Overseerr Requests"
+}
+
+if ($Update.Count -eq 0) { Warn "No refresh target chosen; defaulting to Plex Libraries."; $Update += "Plex Libraries"; $UsePlexSrv = $true; $PlexAddress = "http://host.docker.internal:32400" }
 
 Title "5) Library collection service (used to skip content you already own)"
 Write-Host "  1) Plex Library      (recommended if you use Plex)"
 Write-Host "  2) Jellyfin Library  (reads your Jellyfin library)"
 Write-Host "  3) Trakt Collection"
 switch (Ask "Choose 1/2/3" "1") {
-    "2" { $Collection = "Jellyfin Library"; $UseJellyfin = $true }
+    "2" { $Collection = "Jellyfin Library" }
     "3" { $Collection = "Trakt Collection" }
-    default { $Collection = "Plex Library"; $UsePlexSrv = $true }
+    default { $Collection = "Plex Library" }
 }
 if ($Collection -eq "Plex Library") { $Ignore = "Plex Discover Watch Status"; $IgnorePath = "" }
 else { $Ignore = "Local Ignore List"; $IgnorePath = "/config" }
-
-$PlexAddress = ""; $JellyfinAddress = ""; $JellyfinApiKey = ""; $OverseerrUrl = ""; $OverseerrApiKey = ""
-if ($UsePlexSrv) {
-    Title "Plex server"
-    Write-Host "Inside Docker, your host is reachable as host.docker.internal." -ForegroundColor DarkGray
-    $PlexAddress = Ask "Plex server address" "http://host.docker.internal:32400"
-}
-if ($UseJellyfin) {
-    Title "Jellyfin server"
-    $JellyfinAddress = Ask "Jellyfin server address" "http://host.docker.internal:8096"
-    $JellyfinApiKey  = Ask "Jellyfin API key (Dashboard -> API Keys, blank to set later)" ""
-}
-if ($UseOverseerr) {
-    Title "Overseerr / Jellyseerr"
-    $OverseerrUrl    = Ask "Overseerr/Jellyseerr base URL" "http://host.docker.internal:5055"
-    $OverseerrApiKey = Ask "Overseerr/Jellyseerr API key (blank to set later)" ""
-}
 
 # ---------------------------------------------------------------------------
 # 6. Write configs
@@ -137,15 +166,21 @@ if ((Test-Path "zurg/config.yml") -and -not (YesNo "zurg/config.yml exists - ove
     Ok "Wrote zurg/config.yml"
 }
 
+if ($Profiles -contains "jellyseerr") { New-Item -ItemType Directory -Force -Path "jellyseerr/config" | Out-Null }
+$ProfilesCsv = ($Profiles -join ",")
 @(
     "TZ=$TzValue"
+    "COMPOSE_PROFILES=$ProfilesCsv"
+    "PUID=1000"
+    "PGID=1000"
+    "PLEX_CLAIM="
     "PLEX_TOKEN="
     "TRAKT_CLIENT_ID="
     "TRAKT_CLIENT_SECRET="
     "DEBRIDLINK_CLIENT_ID="
     "ORIONOID_CLIENT_ID="
 ) | Set-Content ".env"
-Ok "Wrote .env (TZ=$TzValue)"
+Ok "Wrote .env (TZ=$TzValue, profiles='$ProfilesCsv')"
 
 # ---------------------------------------------------------------------------
 # 7. Build image + generate settings.json
@@ -195,7 +230,8 @@ Ok "Containers started"
 Title "9) rclone mount (optional)"
 Write-Host "This mounts the Zurg WebDAV to a drive letter so Plex/Jellyfin can read it." -ForegroundColor DarkGray
 Write-Host "Requires WinFsp (https://winfsp.dev) to be installed." -ForegroundColor DarkGray
-if (YesNo "Set up an rclone mount now?" "N") {
+$rcloneDefault = if ($NeedRclone) { "Y" } else { "N" }
+if (YesNo "Set up an rclone mount now?" $rcloneDefault) {
     $rclone = Join-Path $ScriptDir "rclone.exe"
     if (-not (Test-Path $rclone)) { $rclone = "rclone" }
     $drive = Ask "Drive letter to mount to" "X"

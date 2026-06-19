@@ -27,3 +27,79 @@ services:
     tty: true        # Important for interactive setup if needed
     depends_on:
       - zurg
+
+  # -------------------------------------------------------------------------
+  # Optional services below only start when their profile is enabled (the
+  # installer sets COMPOSE_PROFILES in .env). On Linux the "rclone" service
+  # mounts the Zurg WebDAV into ./data and shares it with Plex/Jellyfin so they
+  # can read your debrid library. FUSE mount sharing needs a Linux host
+  # (cap_add SYS_ADMIN + /dev/fuse); on Windows/macOS run the media servers
+  # natively and use the rclone.exe drive instead.
+  # -------------------------------------------------------------------------
+  rclone:
+    image: rclone/rclone:latest
+    container_name: rclone
+    restart: unless-stopped
+    profiles: ["rclone"]
+    environment:
+      - TZ=${TZ:-Europe/Bucharest}
+    volumes:
+      - ./rclone/rclone.conf:/config/rclone/rclone.conf:ro
+      - ./data:/data:rshared
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    devices:
+      - /dev/fuse:/dev/fuse:rwm
+    command: "mount zurg: /data --allow-other --allow-non-empty --dir-cache-time 10s --vfs-cache-mode full --umask 002"
+    depends_on:
+      - zurg
+
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    restart: unless-stopped
+    profiles: ["plex"]
+    ports:
+      - 32400:32400
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Bucharest}
+      - VERSION=docker
+      - PLEX_CLAIM=${PLEX_CLAIM:-}
+    volumes:
+      - ./plex/config:/config
+      - ./data:/data:rslave
+    depends_on:
+      - rclone
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    profiles: ["jellyfin"]
+    ports:
+      - 8096:8096
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Bucharest}
+    volumes:
+      - ./jellyfin/config:/config
+      - ./data:/data:rslave
+    depends_on:
+      - rclone
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    restart: unless-stopped
+    profiles: ["jellyseerr"]
+    ports:
+      - 5055:5055
+    environment:
+      - TZ=${TZ:-Europe/Bucharest}
+    volumes:
+      - ./jellyseerr/config:/app/config
