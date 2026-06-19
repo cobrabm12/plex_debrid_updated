@@ -5,7 +5,9 @@ import releases
 
 name = "orionoid"
 token = ''
-client_id = "GPQJBFGJKAHVFM37LJDNNLTHKJMXEAJJ"
+# Override via the ORIONOID_CLIENT_ID environment variable; falls back to the
+# shared public plex_debrid default so it works out of the box.
+client_id = os.environ.get("ORIONOID_CLIENT_ID") or "GPQJBFGJKAHVFM37LJDNNLTHKJMXEAJJ"
 
 default_opts = [["limitcount", "5"], ["sortvalue", "popularity"], [
     "streamtype", "torrent"], ["filename", "true"]]

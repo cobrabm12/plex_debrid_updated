@@ -15,6 +15,12 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Bucharest
+      # Optional credential overrides, read from a local .env file (see .env.example).
+      # Left empty -> the app falls back to its built-in shared public defaults.
+      - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID:-}
+      - TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET:-}
+      - DEBRIDLINK_CLIENT_ID=${DEBRIDLINK_CLIENT_ID:-}
+      - ORIONOID_CLIENT_ID=${ORIONOID_CLIENT_ID:-}
     volumes:
       - ./plex_debrid/config:/config
     stdin_open: true # Important for interactive setup if needed

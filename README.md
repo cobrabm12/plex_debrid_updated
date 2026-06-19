@@ -72,6 +72,14 @@ settings menu.
 - The core `plex_debrid_src/releases/` package was previously excluded from version control by a stray Visual Studio `.gitignore` rule (`[Rr]eleases/`). The `.gitignore` has been corrected and the package restored, otherwise the app fails to start with `ModuleNotFoundError: No module named 'releases'`.
 - **Do not commit `zurg/config.yml` or `plex_debrid/config/settings.json` to a public repository as they contain your private API keys.**
 - `check_watchlist.py` reads your Plex token from the `PLEX_TOKEN` environment variable (or the first CLI argument) — it is no longer hard-coded.
+- **Credentials via environment variables:** the OAuth app credentials (`TRAKT_CLIENT_ID`,
+  `TRAKT_CLIENT_SECRET`, `DEBRIDLINK_CLIENT_ID`, `ORIONOID_CLIENT_ID`) and `PLEX_TOKEN`
+  can be supplied through environment variables instead of being hard-coded. Copy
+  `.env.example` to `.env` (gitignored) and fill in only what you want to override; any
+  value left empty falls back to the shared public plex_debrid defaults, so the stack
+  still works out of the box. `docker-compose` automatically loads `.env`. Your personal
+  Plex token, Real-Debrid key, etc. are still entered in the in-app settings menu and
+  stored in the gitignored `plex_debrid/config/settings.json` — never in the source.
 - **Plex API change (late 2025/2026):** Plex deprecated the `metadata.provider.plex.tv`
   endpoints for the watchlist. The Plex integration now uses `discover.provider.plex.tv`
   for the watchlist, add/remove-from-watchlist and search operations (matching the

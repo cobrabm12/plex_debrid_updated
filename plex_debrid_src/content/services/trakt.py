@@ -5,8 +5,11 @@ from content import classes
 from ui.ui_print import *
 
 name = 'Trakt'
-client_id = "0183a05ad97098d87287fe46da4ae286f434f32e8e951caad4cc147c947d79a3"
-client_secret = "87109ed53fe1b4d6b0239e671f36cd2f17378384fa1ae09888a32643f83b7e6c"
+# Trakt OAuth app credentials. Override via the TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET
+# environment variables (e.g. in .env) to use your own Trakt application; otherwise
+# the shared public plex_debrid defaults are used so it works out of the box.
+client_id = os.environ.get("TRAKT_CLIENT_ID") or "0183a05ad97098d87287fe46da4ae286f434f32e8e951caad4cc147c947d79a3"
+client_secret = os.environ.get("TRAKT_CLIENT_SECRET") or "87109ed53fe1b4d6b0239e671f36cd2f17378384fa1ae09888a32643f83b7e6c"
 lists = []
 users = []
 current_user = ["", ""]

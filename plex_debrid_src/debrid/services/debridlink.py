@@ -7,7 +7,9 @@ name = "Debrid Link"
 short = "DL"
 # (required) Authentification of the Debrid service, can be oauth aswell. Create a setting for the required variables in the ui.settings_list. For an oauth example check the trakt authentification.
 api_key = ""
-client_id = "0KLCzpbPTCsWZtQ9Ad0aZA"
+# Override via the DEBRIDLINK_CLIENT_ID environment variable; falls back to the
+# shared public plex_debrid default so it works out of the box.
+client_id = os.environ.get("DEBRIDLINK_CLIENT_ID") or "0KLCzpbPTCsWZtQ9Ad0aZA"
 # Define Variables
 session = requests.Session()
 
