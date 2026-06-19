@@ -152,13 +152,12 @@ where_server() {
 }
 
 PLEX_ADDRESS=""; JELLYFIN_ADDRESS=""; JELLYFIN_API_KEY=""; OVERSEERR_URL=""; OVERSEERR_API_KEY=""; PLEX_CLAIM=""
-USE_PLEX_SRV=false; USE_JELLYFIN=false
 
 title "4) Media servers"
 echo "${DIM}This installer can deploy Plex/Jellyfin for you (Linux) or connect to ones you already run.${RST}"
 
 if yesno "Use Plex?" "Y"; then
-  USE_PLEX_SRV=true; UPDATE+=("Plex Libraries")
+  UPDATE+=("Plex Libraries")
   if [ "$(where_server "Plex")" = "docker" ]; then
     PROFILES+=("plex"); NEED_RCLONE=true; PLEX_ADDRESS="http://plex:32400"
     echo "  ${DIM}Optional: a claim token from https://plex.tv/claim auto-links this server to your account.${RST}"
@@ -170,7 +169,7 @@ if yesno "Use Plex?" "Y"; then
 fi
 
 if yesno "Use Jellyfin?" "N"; then
-  USE_JELLYFIN=true; UPDATE+=("Jellyfin Libraries")
+  UPDATE+=("Jellyfin Libraries")
   if [ "$(where_server "Jellyfin")" = "docker" ]; then
     PROFILES+=("jellyfin"); NEED_RCLONE=true; JELLYFIN_ADDRESS="http://jellyfin:8096"
     ok "Jellyfin will be installed in Docker ($JELLYFIN_ADDRESS)"
@@ -196,7 +195,7 @@ fi
 
 if [ "${#UPDATE[@]}" -eq 0 ]; then
   warn "No refresh target chosen; defaulting to Plex Libraries."
-  UPDATE+=("Plex Libraries"); USE_PLEX_SRV=true; PLEX_ADDRESS="${PLEX_ADDRESS:-http://host.docker.internal:32400}"
+  UPDATE+=("Plex Libraries"); PLEX_ADDRESS="${PLEX_ADDRESS:-http://host.docker.internal:32400}"
 fi
 
 title "5) Library collection service (used to skip content you already own)"
