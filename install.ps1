@@ -153,6 +153,10 @@ switch (Ask "Choose 1/2/3" "1") {
 if ($Collection -eq "Plex Library") { $Ignore = "Plex Discover Watch Status"; $IgnorePath = "" }
 else { $Ignore = "Local Ignore List"; $IgnorePath = "/config" }
 
+Title "Local Stremio addon (optional)"
+Write-Host "A Torrentio-style addon you install in Stremio; resolves streams on demand via Real-Debrid." -ForegroundColor DarkGray
+if (YesNo "Enable the local Stremio addon (port 7000)?" "N") { $Profiles += "addon" }
+
 # ---------------------------------------------------------------------------
 # 6. Write configs
 # ---------------------------------------------------------------------------
@@ -251,6 +255,8 @@ if (YesNo "Set up an rclone mount now?" $rcloneDefault) {
 # done
 # ---------------------------------------------------------------------------
 Title "Done! Next steps"
+if ($Profiles -contains "jellyseerr") { Write-Host "  Jellyseerr:     http://localhost:5055" -ForegroundColor Green }
+if ($Profiles -contains "addon")      { Write-Host "  Stremio addon:  add http://localhost:7000/manifest.json in Stremio" -ForegroundColor Green }
 Write-Host @"
 The stack is running.
 

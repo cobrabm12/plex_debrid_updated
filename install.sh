@@ -211,6 +211,11 @@ esac
 # ignore service: Plex watch-status only makes sense with Plex collection
 if [ "$COLLECTION" = "Plex Library" ]; then IGNORE="Plex Discover Watch Status"; IGNORE_PATH=""
 else IGNORE="Local Ignore List"; IGNORE_PATH="/config"; fi
+
+title "Local Stremio addon (optional)"
+echo "${DIM}A Torrentio-style addon you install in Stremio; resolves streams on demand via Real-Debrid.${RST}"
+if yesno "Enable the local Stremio addon (port 7000)?" "N"; then PROFILES+=("addon"); fi
+
 $NEED_RCLONE && PROFILES+=("rclone")
 
 # ---------------------------------------------------------------------------
@@ -331,6 +336,7 @@ if [ "${#PROFILES[@]}" -gt 0 ]; then
   case " ${PROFILES[*]} " in *" plex "*)       echo "  • Plex:       http://localhost:32400/web  — add a library pointing at /data";; esac
   case " ${PROFILES[*]} " in *" jellyfin "*)   echo "  • Jellyfin:   http://localhost:8096        — add a library pointing at /data";; esac
   case " ${PROFILES[*]} " in *" jellyseerr "*) echo "  • Jellyseerr: http://localhost:5055";; esac
+  case " ${PROFILES[*]} " in *" addon "*)      echo "  • Stremio addon: add http://localhost:7000/manifest.json in Stremio";; esac
   case " ${PROFILES[*]} " in *" rclone "*)     echo "  • Debrid mount is shared with the servers at /data (host folder: ./data)";; esac
   echo ""
 fi

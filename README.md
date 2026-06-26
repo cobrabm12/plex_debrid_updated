@@ -47,6 +47,31 @@ deploy it here or connect to one you already run:
 
 If you prefer to configure everything by hand, follow the manual steps below.
 
+## Local Stremio addon (Torrentio-style)
+
+The project ships a small, self-hosted Stremio addon (`plex_debrid_src/stremio_addon.py`)
+that reuses the same scrapers and Real-Debrid integration to give you **on-demand
+streaming inside Stremio** — like Torrentio, but running locally on your own machine.
+
+Enable it in the installer ("Enable the local Stremio addon"), or start it manually:
+
+```bash
+docker compose --profile addon up -d stremio_addon
+```
+
+Then in Stremio (Desktop / Web / Android / TV) → **Addons → paste an addon URL**:
+
+```
+http://<your-host>:7000/manifest.json
+```
+
+When you open a movie/episode, the addon scrapes torrents and lists them. Because
+Real-Debrid removed batch instant-availability lookups, links are resolved **on click**:
+selecting a stream adds the magnet to Real-Debrid, picks the right file, unrestricts it
+and redirects the player to the direct link. It reads your Real-Debrid key from
+`plex_debrid/config/settings.json` (or the `RD_API_KEY` env var); `ADDON_SOURCES`
+(default `torrentio`) controls which scrapers it uses.
+
 ## Manual installation
 
 1.  **Clone the repository:**

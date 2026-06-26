@@ -11,6 +11,7 @@ services:
 
   plex_debrid:
     build: ./plex_debrid_src
+    image: plex_debrid_local
     container_name: plex_debrid
     restart: unless-stopped
     environment:
@@ -103,3 +104,25 @@ services:
       - TZ=${TZ:-Europe/Bucharest}
     volumes:
       - ./jellyseerr/config:/app/config
+
+  # Local Torrentio-style Stremio addon (plex_debrid scrapers + Real-Debrid).
+  # Reuses the plex_debrid image; install http://<host>:7000/manifest.json in Stremio.
+  stremio_addon:
+    image: plex_debrid_local
+    container_name: stremio_addon
+    restart: unless-stopped
+    profiles: ["addon"]
+    command: python stremio_addon.py
+    environment:
+      - TZ=${TZ:-Europe/Bucharest}
+      - ADDON_PORT=7000
+      - PD_CONFIG_DIR=/config
+      - RD_API_KEY=${RD_API_KEY:-}
+      - ADDON_SOURCES=${ADDON_SOURCES:-torrentio}
+    ports:
+      - 7000:7000
+    volumes:
+      - ./plex_debrid/config:/config
+    depends_on:
+      - plex_debrid
+      - zurg
