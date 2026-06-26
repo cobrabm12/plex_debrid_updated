@@ -1,6 +1,7 @@
 #import modules
 from base import *
 import xml.etree.ElementTree as ET
+import uuid
 #import parent modules
 from content import classes
 from ui.ui_print import *
@@ -10,7 +11,21 @@ session = requests.Session()
 users = []
 headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
 current_library = []
-client_identifier = 'plex-debrid-client-id-' + str(time.time())
+# Stable, per-machine client identifier (same approach python-plexapi uses by
+# default via getnode()). A stable id keeps plex_debrid registered as a single
+# Plex device across restarts instead of creating a new one every run.
+client_identifier = 'plex-debrid-' + str(hex(uuid.getnode()))
+# Send the standard X-Plex-* headers on every request. Plex's discover/metadata
+# APIs increasingly expect an identified client, so mirror what a real Plex
+# client / python-plexapi sends.
+session.headers.update({
+    'X-Plex-Product': 'Plex Debrid',
+    'X-Plex-Version': '0.1',
+    'X-Plex-Client-Identifier': client_identifier,
+    'X-Plex-Platform': 'Python',
+    'X-Plex-Device': 'Plex Debrid',
+    'X-Plex-Device-Name': 'Plex Debrid',
+})
 
 def setup(cls, new=False):
     from content.services import setup
