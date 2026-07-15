@@ -1,5 +1,6 @@
 #import modules
 from base import *
+import os
 from ui.ui_print import *
 import releases
 # (required) Name of the Debrid service
@@ -10,6 +11,8 @@ api_key = ""
 # Override via the DEBRIDLINK_CLIENT_ID environment variable; falls back to the
 # shared public plex_debrid default so it works out of the box.
 client_id = os.environ.get("DEBRIDLINK_CLIENT_ID") or "0KLCzpbPTCsWZtQ9Ad0aZA"
+api_key = os.environ.get("DEBRIDLINK_API_KEY", "")
+client_id = os.environ.get("DEBRIDLINK_CLIENT_ID", "0KLCzpbPTCsWZtQ9Ad0aZA")
 # Define Variables
 session = requests.Session()
 

@@ -1,5 +1,6 @@
 #import modules
 from base import *
+import os
 from ui.ui_print import *
 import releases
 
@@ -7,7 +8,7 @@ import releases
 name = "Real Debrid"
 short = "RD"
 # (required) Authentification of the Debrid service, can be oauth aswell. Create a setting for the required variables in the ui.settings_list. For an oauth example check the trakt authentification.
-api_key = ""
+api_key = os.environ.get("RD_API_KEY", "")
 # Define Variables
 session = requests.Session()
 errors = [

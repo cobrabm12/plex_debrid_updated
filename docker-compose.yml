@@ -4,7 +4,7 @@ services:
     container_name: zurg
     restart: unless-stopped
     ports:
-      - 9999:9999
+      - "9999:9999"
     volumes:
       - ./zurg/config.yml:/app/config.yml
       - ./zurg/data:/app/data
@@ -22,8 +22,11 @@ services:
       - TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET:-}
       - DEBRIDLINK_CLIENT_ID=${DEBRIDLINK_CLIENT_ID:-}
       - ORIONOID_CLIENT_ID=${ORIONOID_CLIENT_ID:-}
+      - RD_API_KEY=${RD_API_KEY:-}
     volumes:
       - ./plex_debrid/config:/config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     stdin_open: true # Important for interactive setup if needed
     tty: true        # Important for interactive setup if needed
     depends_on:
