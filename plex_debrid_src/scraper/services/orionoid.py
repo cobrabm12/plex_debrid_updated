@@ -1,11 +1,12 @@
 # import modules
 from base import *
+import os
 from ui.ui_print import *
 import releases
 
 name = "orionoid"
 token = ''
-client_id = "GPQJBFGJKAHVFM37LJDNNLTHKJMXEAJJ"
+client_id = os.environ.get("ORIONOID_CLIENT_ID", "GPQJBFGJKAHVFM37LJDNNLTHKJMXEAJJ")
 
 default_opts = [["limitcount", "5"], ["sortvalue", "popularity"], [
     "streamtype", "torrent"], ["filename", "true"]]

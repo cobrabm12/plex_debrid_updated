@@ -11,10 +11,16 @@ services:
 
   plex_debrid:
     build: ./plex_debrid_src
+    image: plex_debrid_local
     container_name: plex_debrid
     restart: unless-stopped
     environment:
       - TZ=${TZ:-Europe/Bucharest}
+      - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID:-}
+      - TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET:-}
+      - DEBRIDLINK_CLIENT_ID=${DEBRIDLINK_CLIENT_ID:-}
+      - ORIONOID_CLIENT_ID=${ORIONOID_CLIENT_ID:-}
+      - RD_API_KEY=${RD_API_KEY:-}
     volumes:
       - ./plex_debrid/config:/config
     extra_hosts:

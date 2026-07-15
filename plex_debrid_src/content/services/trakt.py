@@ -1,12 +1,13 @@
 #import modules
 from base import *
+import os
 #import parent modules
 from content import classes
 from ui.ui_print import *
 
 name = 'Trakt'
-client_id = "0183a05ad97098d87287fe46da4ae286f434f32e8e951caad4cc147c947d79a3"
-client_secret = "87109ed53fe1b4d6b0239e671f36cd2f17378384fa1ae09888a32643f83b7e6c"
+client_id = os.environ.get("TRAKT_CLIENT_ID", "0183a05ad97098d87287fe46da4ae286f434f32e8e951caad4cc147c947d79a3")
+client_secret = os.environ.get("TRAKT_CLIENT_SECRET", "87109ed53fe1b4d6b0239e671f36cd2f17378384fa1ae09888a32643f83b7e6c")
 lists = []
 users = []
 current_user = ["", ""]
