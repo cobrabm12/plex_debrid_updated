@@ -1,9 +1,14 @@
-FROM python:3
+FROM python:3.12-slim
 
-ADD . / ./
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TERM=xterm
 
-RUN pip install -r requirements.txt
+WORKDIR /app
 
-ENV TERM=xterm
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-CMD [ "python", "./main.py", "--config-dir", "config", "-e", "TERM=xterm"]
+COPY . ./
+
+CMD ["python", "./main.py", "--config-dir", "/config", "-e", "TERM=xterm"]
