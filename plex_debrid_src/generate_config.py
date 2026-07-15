@@ -1,4 +1,34 @@
 #!/usr/bin/env python3
+"""Headless generator for plex_debrid's settings.json.
+
+The interactive installer (install.sh / install.ps1) collects high-level choices
+and passes them in as PD_* environment variables. This script applies them to the
+real settings objects and writes a complete, valid settings.json (every key, with
+the code's own defaults for anything not provided). Run inside the built image:
+
+    docker compose run --rm -e PD_RD_API_KEY=... plex_debrid python generate_config.py
+
+OAuth-based logins (Plex users, Trakt users, Debrid Link / Put.io / Orionoid) are
+left empty on purpose and are completed interactively in the app's settings menu.
+"""
+import os
+import sys
+import json
+
+sys.argv = ["generate_config.py"]
+
+# importing ui resolves the full package import chain in the correct order
+import ui  # noqa: F401
+from settings import settings_list
+from ui import ui_settings
+
+import content.services as content_services
+import scraper.services as scraper_services
+import debrid.services as debrid_services
+from content import classes
+from content.services import plex, jellyfin, overseerr, textfile  # noqa: F401
+from debrid.services import realdebrid
+import releases
 """Generate /config/settings.json from PD_* environment variables.
 
 This is used by non-interactive installers or automation. OAuth-based logins such
@@ -30,6 +60,26 @@ def env(name, default=""):
 
 def env_list(name, default):
     raw = os.environ.get(name, "")
+    items = [x.strip() for x in raw.split(",") if x.strip()]
+    return items if items else default
+
+
+# --- content sources (what to monitor for new content) ---
+content_services.active = env_list("PD_CONTENT_SERVICES", ["Plex", "Trakt", "Overseerr"])
+
+# --- library services ---
+classes.library.active = env_list("PD_COLLECTION_SERVICE", ["Plex Library"])
+classes.refresh.active = env_list("PD_UPDATE_SERVICES", ["Plex Libraries"])
+classes.ignore.active = env_list("PD_IGNORE_SERVICES", ["Plex Discover Watch Status"])
+
+# --- scrapers ---
+scraper_services.active = env_list("PD_SOURCES", ["torrentio"])
+
+# --- debrid ---
+debrid_services.active = env_list("PD_DEBRID_SERVICES", ["Real Debrid"])
+realdebrid.api_key = env("PD_RD_API_KEY", realdebrid.api_key)
+
+# --- service addresses / keys (only override when provided) ---
     items = [item.strip() for item in raw.split(",") if item.strip()]
     return items if items else default
 
@@ -56,6 +106,41 @@ if env("PD_OVERSEERR_API_KEY"):
 if "Local Ignore List" in classes.ignore.active:
     textfile.library.ignore.path = env("PD_IGNORE_PATH", "/config")
 
+# --- a sensible default download "version" if none is configured ---
+default_versions = [
+    [
+        "Any",
+        [["retries", "<=", "48"], ["media type", "all", ""]],
+        "true",
+        [["title", "requirement", "exclude", "dolby.?vision|\\b(dv)\\b|dovi"]],
+    ]
+]
+if not getattr(releases.sort, "versions", None):
+    releases.sort.versions = default_versions
+
+# --- UI: keep the menu on startup so the user can finish OAuth logins ---
+ui_settings.run_directly = "true"
+# ui_settings.version already carries the current version stamp, which prevents the
+# app from triggering an interactive settings migration on first launch.
+
+# --- serialise every setting exactly like the app's own save() does ---
+save_settings = {}
+for category, settings in settings_list:
+    for setting in settings:
+        save_settings[setting.name] = setting.get()
+
+config_dir = os.environ.get("PD_CONFIG_DIR", "/config")
+os.makedirs(config_dir, exist_ok=True)
+path = os.path.join(config_dir, "settings.json")
+with open(path, "w") as f:
+    json.dump(save_settings, f, indent=4)
+
+print("Wrote " + path)
+print("  content services : " + ", ".join(content_services.active))
+print("  collection        : " + ", ".join(classes.library.active))
+print("  update services   : " + ", ".join(classes.refresh.active))
+print("  sources           : " + ", ".join(scraper_services.active))
+print("  debrid            : " + ", ".join(debrid_services.active))
 if not getattr(releases.sort, "versions", None):
     releases.sort.versions = [
         [

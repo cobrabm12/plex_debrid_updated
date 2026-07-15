@@ -1,16 +1,16 @@
-```yaml
 # Zurg Configuration
 # Get your API Token from: https://real-debrid.com/apitoken
+# Copy this file to config.yml and fill in your token.
 
 zurg: v1
 token: YOUR_REAL_DEBRID_API_TOKEN_HERE
 # host: "[::]" # Uncomment if you want to access zurg from outside localhost
-    # port: 9999
-    # concurrent_workers: 32
-    # check_for_changes_every_secs: 10
-    # ignore_renaming: false
-    # retain_rd_torrent_name: false
-    # retain_folder_name_extension: false
+# port: 9999
+# concurrent_workers: 32
+# check_for_changes_every_secs: 10
+# ignore_renaming: false
+# retain_rd_torrent_name: false
+# retain_folder_name_extension: false
 enable_repair: true
 
 directories:
@@ -27,4 +27,3 @@ directories:
     filters:
       - regex: /.*/
     root_folder_id: null
-```

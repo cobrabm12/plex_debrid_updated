@@ -195,6 +195,61 @@ def download(element, stream=True, query='', force=False):
     return False
 
 # (required) Check Function
+#
+# Real-Debrid disabled the data returned by /torrents/instantAvailability around
+# November 2024, so cached availability can no longer be discovered in a single
+# batch call. This function therefore works in two steps:
+#   1. It still queries instantAvailability first (cheap) in case Real-Debrid ever
+#      returns data again for some hashes.
+#   2. For every hash that instantAvailability does not cover, it "probes" the
+#      torrent: it adds the magnet, reads the real file list from /torrents/info,
+#      selects the wanted files to detect instant (cached) availability, and then
+#      removes the probe torrent so check() leaves no residue. The actual download
+#      is still performed by download().
+# NOTE: step 2 is heavier than the old batch check (a few API calls per release);
+# MAX_CHECK bounds how many uncovered releases are probed per call.
+MAX_CHECK = 50
+
+def probe_files(release, wanted_patterns, unwanted_patterns):
+    # Add the magnet, read its real file list, and detect cached status, then clean up.
+    torrent_id = None
+    try:
+        response = post('https://api.real-debrid.com/rest/1.0/torrents/addMagnet', {'magnet': str(release.download[0])})
+        torrent_id = str(response.id)
+        info = get('https://api.real-debrid.com/rest/1.0/torrents/info/' + torrent_id)
+        # the file list can be empty for a few moments while the magnet is converted
+        if info is not None and getattr(info, "status", "") in ["magnet_conversion", "queued"] and not getattr(info, "files", None):
+            time.sleep(1)
+            info = get('https://api.real-debrid.com/rest/1.0/torrents/info/' + torrent_id)
+        if info is None or not hasattr(info, "files") or not info.files:
+            return
+        version_files = []
+        for f in info.files:
+            version_files.append(file(str(f.id), f.path, f.bytes, wanted_patterns, unwanted_patterns))
+        if len(version_files) == 0:
+            return
+        release.files = [version(version_files)]
+        release.wanted = release.files[0].wanted
+        release.unwanted = release.files[0].unwanted
+        release.size = release.files[0].size
+        # detect cached status: select the wanted files and check whether Real-Debrid
+        # reports the torrent as already 'downloaded' (i.e. instantly available).
+        wanted_ids = [vf.id for vf in version_files if vf.wanted]
+        if len(wanted_ids) == 0:
+            wanted_ids = [vf.id for vf in version_files]
+        post('https://api.real-debrid.com/rest/1.0/torrents/selectFiles/' + torrent_id, {'files': ','.join(wanted_ids)})
+        info = get('https://api.real-debrid.com/rest/1.0/torrents/info/' + torrent_id)
+        if info is not None and getattr(info, "status", "") == "downloaded":
+            if 'RD' not in release.cached:
+                release.cached += ['RD']
+        release.checked = True
+    except Exception as e:
+        ui_print("[realdebrid] error: (probe exception) " + str(e), debug=ui_settings.debug)
+    finally:
+        # remove the probe torrent so check() does not leave residue or running downloads
+        if torrent_id is not None:
+            delete('https://api.real-debrid.com/rest/1.0/torrents/delete/' + torrent_id)
+
 def check(element, force=False):
     if force:
         wanted = ['.*']
@@ -211,31 +266,40 @@ def check(element, force=False):
         else:
             ui_print("[realdebrid] error (missing torrent hash): ignoring release '" + release.title + "' ",ui_settings.debug)
             element.Releases.remove(release)
-    if len(hashes) > 0:
-        response = get('https://api.real-debrid.com/rest/1.0/torrents/instantAvailability/' + '/'.join(hashes))
-        ui_print("[realdebrid] checking and sorting all release files ...", ui_settings.debug)
-        for release in element.Releases:
-            release.files = []
-            release_hash = release.hash.lower()
-            if hasattr(response, release_hash):
-                response_attr = getattr(response, release_hash)
-                if hasattr(response_attr, 'rd'):
-                    rd_attr = response_attr.rd
-                    if len(rd_attr) > 0:
-                        for cashed_version in rd_attr:
-                            version_files = []
-                            for file_ in cashed_version.__dict__:
-                                file_attr = getattr(cashed_version, file_)
-                                debrid_file = file(file_, file_attr.filename, file_attr.filesize, wanted_patterns, unwanted_patterns)
-                                version_files.append(debrid_file)
-                            release.files += [version(version_files), ]
-                        # select cached version that has the most needed, most wanted, least unwanted files and most files overall
-                        release.files.sort(key=lambda x: len(x.files), reverse=True)
-                        release.files.sort(key=lambda x: x.wanted, reverse=True)
-                        release.files.sort(key=lambda x: x.unwanted, reverse=False)
-                        release.wanted = release.files[0].wanted
-                        release.unwanted = release.files[0].unwanted
-                        release.size = release.files[0].size
-                        release.cached += ['RD']
-                        continue
-        ui_print("done",ui_settings.debug)
+    if len(hashes) == 0:
+        return
+    # step 1: legacy batch availability lookup (kept as a best-effort fast path)
+    response = get('https://api.real-debrid.com/rest/1.0/torrents/instantAvailability/' + '/'.join(hashes))
+    ui_print("[realdebrid] checking and sorting all release files ...", ui_settings.debug)
+    probed = 0
+    for release in element.Releases:
+        if getattr(release, "checked", False) and len(release.files) > 0:
+            continue
+        release.files = []
+        release_hash = release.hash.lower()
+        # step 1 result, if Real-Debrid still returns availability data for this hash
+        if response is not None and hasattr(response, release_hash):
+            response_attr = getattr(response, release_hash)
+            if hasattr(response_attr, 'rd') and len(response_attr.rd) > 0:
+                for cashed_version in response_attr.rd:
+                    version_files = []
+                    for file_ in cashed_version.__dict__:
+                        file_attr = getattr(cashed_version, file_)
+                        debrid_file = file(file_, file_attr.filename, file_attr.filesize, wanted_patterns, unwanted_patterns)
+                        version_files.append(debrid_file)
+                    release.files += [version(version_files), ]
+                # select cached version that has the most needed, most wanted, least unwanted files and most files overall
+                release.files.sort(key=lambda x: len(x.files), reverse=True)
+                release.files.sort(key=lambda x: x.wanted, reverse=True)
+                release.files.sort(key=lambda x: x.unwanted, reverse=False)
+                release.wanted = release.files[0].wanted
+                release.unwanted = release.files[0].unwanted
+                release.size = release.files[0].size
+                release.cached += ['RD']
+                release.checked = True
+                continue
+        # step 2: instantAvailability returned nothing for this hash -> probe it directly
+        if probed < MAX_CHECK:
+            probed += 1
+            probe_files(release, wanted_patterns, unwanted_patterns)
+    ui_print("done",ui_settings.debug)

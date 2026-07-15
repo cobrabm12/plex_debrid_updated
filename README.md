@@ -9,12 +9,75 @@ This repository contains a complete setup for streaming content using Plex, Real
 - A [Plex](https://www.plex.tv/) server
 - [Trakt.tv](https://trakt.tv/) account (optional but recommended)
 
-## Installation
+## Quick start (recommended)
+
+An interactive installer sets everything up for you — it checks/installs Docker,
+asks which services you want to use, writes the config files and starts the stack.
+
+**Linux (any distribution) / macOS:**
+```bash
+git clone https://github.com/cobrabm12/plex_debrid_updated.git
+cd plex_debrid_updated
+./install.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/cobrabm12/plex_debrid_updated.git
+cd plex_debrid_updated
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+The installer asks for your Real-Debrid token and which content sources (Plex
+Watchlist / Trakt / Overseerr-Jellyseerr), media servers (Plex / Jellyfin) and
+collection service you want, then generates a complete `settings.json`, builds the
+image and starts the containers. Accounts that use OAuth (Plex, Trakt) are linked
+afterwards in the app's interactive menu (the installer tells you the exact command).
+You can re-run the installer any time to reconfigure.
+
+**It can also install the media servers for you.** For each server it asks whether to
+deploy it here or connect to one you already run:
+
+- On **Linux** it can run Plex, Jellyfin and/or Jellyseerr in Docker (extra services
+  in `docker-compose.yml`, enabled via compose profiles). An `rclone` container mounts
+  the Zurg WebDAV into a shared `./data` folder so Plex/Jellyfin can read your debrid
+  library — point their libraries at `/data`. (FUSE mount sharing requires a Linux host.)
+- On **Windows** it installs Plex/Jellyfin natively via `winget` and uses the bundled
+  `rclone.exe` to mount the library to a drive letter (Jellyseerr still runs in Docker).
+
+If you prefer to configure everything by hand, follow the manual steps below.
+
+## Local Stremio addon (Torrentio-style)
+
+The project ships a small, self-hosted Stremio addon (`plex_debrid_src/stremio_addon.py`)
+that reuses the same scrapers and Real-Debrid integration to give you **on-demand
+streaming inside Stremio** — like Torrentio, but running locally on your own machine.
+
+Enable it in the installer ("Enable the local Stremio addon"), or start it manually:
+
+```bash
+docker compose --profile addon up -d stremio_addon
+```
+
+Then in Stremio (Desktop / Web / Android / TV) → **Addons → paste an addon URL**:
+
+```
+http://<your-host>:7000/manifest.json
+```
+
+When you open a movie/episode, the addon scrapes torrents and lists them. Because
+Real-Debrid removed batch instant-availability lookups, links are resolved **on click**:
+selecting a stream adds the magnet to Real-Debrid, picks the right file, unrestricts it
+and redirects the player to the direct link. It reads your Real-Debrid key from
+`plex_debrid/config/settings.json` (or the `RD_API_KEY` env var); `ADDON_SOURCES`
+(default `torrentio`) controls which scrapers it uses.
+
+## Manual installation
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/cobrabm12/plex_debrid_trakt.git
-    cd plex_debrid_trakt
+    git clone https://github.com/cobrabm12/plex_debrid_updated.git
+    cd plex_debrid_updated
     ```
 
 2.  **Configure Zurg:**
@@ -59,10 +122,58 @@ This repository contains a complete setup for streaming content using Plex, Real
 - **Plex Debrid** will monitor your Plex Watchlist (or Trakt watchlist) and automatically add movies/shows to Real-Debrid via Zurg.
 - **Rclone** (optional, if used) can mount the Zurg WebDAV to a local drive letter for Plex to read.
 
+## Using Jellyfin (alongside or instead of Plex)
+
+Jellyfin has **no built-in watchlist**, so it cannot be a *content source* (the
+"what to download" list). For a Jellyfin-based or mixed Plex + Jellyfin setup,
+configure plex_debrid like this (all options are in the in-app settings menu under
+`Options/Settings`):
+
+- **Content source** (what to download): use **Trakt** lists, and/or **Jellyseerr**
+  /**Overseerr** requests (Jellyseerr is API-compatible — set it up as the "Overseerr"
+  service). On a mixed setup you can also keep the **Plex** watchlist enabled.
+- **Library collection service** (what you already own, to avoid re-downloading):
+  choose **Jellyfin Library** *or* **Plex Library**. Because Plex and Jellyfin read
+  the same Zurg/Real-Debrid mount, either one reflects the same content. `Jellyfin
+  Library` reads your Jellyfin library via the Jellyfin API and matches items by their
+  IMDb/TMDb/TVDb provider IDs.
+- **Library update services** (refresh after a download): enable **Jellyfin Libraries**
+  and/or **Plex Libraries** — you can enable both at once when running them in parallel.
+
+To configure Jellyfin, set your **Jellyfin API Key** (Jellyfin Dashboard → API Keys)
+and **Jellyfin server address** (e.g. `http://host.docker.internal:8096`) in the
+settings menu.
+
 ## Notes
 
 - The `plex_debrid_src` folder contains the source code for `plex_debrid`. It has been patched to fix User-Agent issues with Torrentio and to handle Real-Debrid API limitations.
+- The core `plex_debrid_src/releases/` package was previously excluded from version control by a stray Visual Studio `.gitignore` rule (`[Rr]eleases/`). The `.gitignore` has been corrected and the package restored, otherwise the app fails to start with `ModuleNotFoundError: No module named 'releases'`.
 - **Do not commit `zurg/config.yml` or `plex_debrid/config/settings.json` to a public repository as they contain your private API keys.**
+- `check_watchlist.py` reads your Plex token from the `PLEX_TOKEN` environment variable (or the first CLI argument) — it is no longer hard-coded.
+- **Credentials via environment variables:** the OAuth app credentials (`TRAKT_CLIENT_ID`,
+  `TRAKT_CLIENT_SECRET`, `DEBRIDLINK_CLIENT_ID`, `ORIONOID_CLIENT_ID`) and `PLEX_TOKEN`
+  can be supplied through environment variables instead of being hard-coded. Copy
+  `.env.example` to `.env` (gitignored) and fill in only what you want to override; any
+  value left empty falls back to the shared public plex_debrid defaults, so the stack
+  still works out of the box. `docker-compose` automatically loads `.env`. Your personal
+  Plex token, Real-Debrid key, etc. are still entered in the in-app settings menu and
+  stored in the gitignored `plex_debrid/config/settings.json` — never in the source.
+- **Plex API change (late 2025/2026):** Plex deprecated the `metadata.provider.plex.tv`
+  endpoints for the watchlist. The Plex integration now uses `discover.provider.plex.tv`
+  for the watchlist, add/remove-from-watchlist and search operations (matching the
+  canonical `python-plexapi` library); metadata and watch-status (scrobble) calls still
+  use `metadata.provider.plex.tv`, which remains active. If your Plex watchlist ever
+  returns `404`, ensure you are on this updated version.
+- **Real-Debrid API change (Nov 2024):** Real-Debrid disabled the data returned by the
+  `/torrents/instantAvailability` endpoint, which plex_debrid relied on to detect cached
+  torrents in a single batch call. The Real-Debrid integration now falls back to *probing*
+  each release (add magnet → read `/torrents/info` → detect cached status → remove the
+  probe torrent) when instant-availability data is missing. This is heavier than the old
+  batch check (a few API calls per release, bounded by `MAX_CHECK` in
+  `debrid/services/realdebrid.py`) and **should be tested against your own Real-Debrid
+  account** — it could not be verified here without live credentials.
+- The `rarbg` scraper (`scraper/services/rarbg.py`) targets `torrentapi.org`, which shut
+  down in 2023; it is non-functional and not part of the default sources. Use `torrentio`.
 
 ## Credits
 
