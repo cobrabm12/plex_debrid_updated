@@ -1,13 +1,14 @@
 #import modules
 from base import *
+import os
 from ui.ui_print import *
 import releases
 # (required) Name of the Debrid service
 name = "Debrid Link"
 short = "DL"
 # (required) Authentification of the Debrid service, can be oauth aswell. Create a setting for the required variables in the ui.settings_list. For an oauth example check the trakt authentification.
-api_key = ""
-client_id = "0KLCzpbPTCsWZtQ9Ad0aZA"
+api_key = os.environ.get("DEBRIDLINK_API_KEY", "")
+client_id = os.environ.get("DEBRIDLINK_CLIENT_ID", "0KLCzpbPTCsWZtQ9Ad0aZA")
 # Define Variables
 session = requests.Session()
 
